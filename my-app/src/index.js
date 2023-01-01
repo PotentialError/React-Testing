@@ -1,123 +1,76 @@
 import React from 'react';
+import 'w3-css/w3.css';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+//File Holding app info
+import { codes } from './codes.js';
 
-function Square(props) {
+function ArtistBlock(props) {
     return (
-    <button className="square" onClick={props.onClick}>
-        {props.value}
-    </button>
+        <div className='w3-quarter w3-padding' height='100%'>
+            <div className='w3-hover-shadow'>
+                <img src={props.image} alt={props.name} width='100%'/>
+                <div className='w3-center w3-red w3-container w3-cell-middle'>
+                    <p className="w3-sans-serif w3-xlarge">{props.name}</p>
+                </div>
+            </div>
+        </div>
+        
     );
 }
-  
-  class Board extends React.Component {
-    renderSquare(i) {
-      return <Square value={this.props.squares[i]} onClick={() => this.props.onClick(i)} />;
-    }
-    render() {
-      return (
-        <div>
-          <div className="board-row">
-            {this.renderSquare(0)}
-            {this.renderSquare(1)}
-            {this.renderSquare(2)}
-          </div>
-          <div className="board-row">
-            {this.renderSquare(3)}
-            {this.renderSquare(4)}
-            {this.renderSquare(5)}
-          </div>
-          <div className="board-row">
-            {this.renderSquare(6)}
-            {this.renderSquare(7)}
-            {this.renderSquare(8)}
-          </div>
-        </div>
-      );
-    }
-  }
-  
-  class Game extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            history: [{
-                squares: Array(9).fill(null),
-            }],
-            stepNumber: 0,
-            xIsNext: true,
+function TopArtists(props) {
+    const elements = [];
+    const rows = [];
+    for(let i = 0; i < props.list.length; i++) {
+        elements.push(<ArtistBlock key={i} name={props.list[i].name} image={props.list[i].image}></ArtistBlock>);
+        if((i+1) % 4 === 0) {
+            rows.push(<div className='w3-row' key={rows.length}>{elements.slice(-4)}</div>);
         }
     }
-    handleClick(i) {
-        const history = this.state.history.slice(0, this.state.stepNumber + 1);
-        const current = history[history.length - 1];
-        const squares = current.squares.slice();
-        if(!squares[i] && !calculateWinner(squares)) {
-            squares[i] = this.state.xIsNext ? 'X' : 'O';
-            this.setState({history: history.concat([{squares: squares, }]), xIsNext: !this.state.xIsNext, stepNumber: history.length});
-        }
+    if(props.list.length % 4 !== 0) {
+        rows.push(<div className='w3-row' key={rows.length}>{elements.slice(-(props.list.length % 4))}</div>);
     }
-    jumpTo(step) {
-        this.setState({
-            history: this.state.history.slice(0, step + 1),
-            stepNumber: step,
-            xIsNext: (step % 2) == 0
-        });
-    }
-    render() {
-        const history = this.state.history;
-        const current = history[this.state.stepNumber];
-        const winner = calculateWinner(current.squares);
-        const moves = history.map((step, move) => {
-            const desc = move ? 'Go to move #' + move : 'Go to game start';
-            return (
-                <li key={move}>
-                    <button onClick={() => this.jumpTo(move)}>{desc}</button>
-                </li>
-            );
-        });
-        let status;
-        if (winner) {
-            status = 'Winner: ' + winner;
-        } else {
-            status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-        }
-        return (
-            <div className="game">
-            <div className="game-board">
-                <Board squares={current.squares} onClick={(i) => this.handleClick(i)}/>
-            </div>
-            <div className="game-info">
-                <div>{status}</div>
-                <ol>{moves}</ol>
-            </div>
-            </div>
-        );
-    }
-  }
-  
-function calculateWinner(squares) {
-    const lines = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6],
-    ];
-    for (let i = 0; i < lines.length; i++) {
-        const [a, b, c] = lines[i];
-        if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-            return squares[a];
-        }
-    }
-    return null;
+    return (
+        <div>{rows}</div>
+    );
 }
-  
   // ========================================
   
   const root = ReactDOM.createRoot(document.getElementById("root"));
-  root.render(<Game />);
-  
+  var authorization = 'Basic ' + btoa(codes.client_id + ':' + codes.client_secret);
+  const ids = ['73rPcaYEhBd0UuVZBqqyQJ', '6wFwvxJkurQPU2UdeD4qVt', '6RCI4WXRwG9jnRHZgzBYFr', '6NgYKD0TKGjwtRFqTyyqKF', '7uwY65fDg3FVJ8MkJ5QuZK', '4iMO20EPodreIaEl8qW66y'];
+  fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+        'Authorization': authorization,
+        'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+        'grant_type': 'client_credentials'
+    }),
+    json: true
+  }).then((response) => response.json().then((data) => getStuff(data.access_token, ids)));
+  async function getArtistNameImage(accessToken, id) {
+    let result = await fetch('https://api.spotify.com/v1/artists/' + id, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + accessToken,
+        }
+      }).then((response) => response.json());
+      var image = 0;
+      console.log(result.name + ' ' + result.images[image].height + ' ' + result.images[image].width);
+      while(result.images[image].height !== result.images[image].width) {
+        console.log('Not equal!')
+        image++;
+      }
+      return {name: result.name, image: result.images[image].url};
+  }
+  function getStuff(accessToken, ids) {
+    const promises = [];
+    for(let i = 0; i < ids.length; i++) {
+        promises.push(getArtistNameImage(accessToken, ids[i]));
+    }
+    Promise.all(promises).then((results) => root.render(<TopArtists list={results}/>));
+    
+  }
